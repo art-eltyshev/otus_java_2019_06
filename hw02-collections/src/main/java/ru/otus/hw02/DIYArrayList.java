@@ -66,13 +66,7 @@ public class DIYArrayList<E> implements List<E> {
 
     @Override
     public boolean add(E e) {
-        if (this.size == this.elements.length) {
-            this.increaseCapacity();
-        }
-
-        this.elements[this.size] = e;
-        this.size++;
-
+        this.add(this.size, e);
         return true;
     }
 
@@ -111,22 +105,23 @@ public class DIYArrayList<E> implements List<E> {
         throw new UnsupportedOperationException();
     }
 
+    private void checkIndex(int index) {
+        if (index < 0 || index > this.size) {
+            throw new IndexOutOfBoundsException(index);
+        }
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public E get(int index) {
-        if (index > this.size) {
-            throw new IndexOutOfBoundsException(index);
-        }
-
+        this.checkIndex(index);
         return (E) this.elements[index];
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public E set(int index, E element) {
-        if (index > this.size) {
-            throw new IndexOutOfBoundsException(index);
-        }
+        this.checkIndex(index);
 
         E oldValue = (E) this.elements[index];
         this.elements[index] = element;
@@ -135,21 +130,28 @@ public class DIYArrayList<E> implements List<E> {
 
     @Override
     public void add(int index, E element) {
+        this.checkIndex(index);
+
         if (this.size == this.elements.length) {
             this.increaseCapacity();
         }
 
-        System.arraycopy(this.elements, index, this.elements, index + 1, this.size - index);
+        if (index < this.size) {
+            System.arraycopy(this.elements, index, this.elements, index + 1, this.size - index);
+        }
+
         this.elements[index] = element;
         this.size++;
     }
 
     @Override
     public E remove(int index) {
+        this.checkIndex(index);
+
         E item = this.get(index);
         this.size--;
 
-        if (this.size > index) {
+        if (index < this.size) {
             System.arraycopy(this.elements, index + 1, this.elements, index, this.size - index);
         }
 
@@ -174,6 +176,7 @@ public class DIYArrayList<E> implements List<E> {
 
     @Override
     public ListIterator<E> listIterator(int index) {
+        this.checkIndex(index);
         return new DIYListIterator(index);
     }
 
