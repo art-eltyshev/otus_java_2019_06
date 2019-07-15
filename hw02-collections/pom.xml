@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>hw01-maven</artifactId>
+    <artifactId>hw02-collections</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -12,13 +12,6 @@
         <artifactId>OtusJavaHW</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-    </dependencies>
 
     <build>
         <finalName>${project.name}</finalName>
@@ -32,7 +25,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>ru.otus.hw01.HelloOtus</mainClass>
+                            <mainClass>ru.otus.hw02.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
