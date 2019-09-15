@@ -9,7 +9,7 @@ import java.util.List;
 
 public class TestRunner {
     public static void run(String classPath) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
-        System.out.println("Running test for " + classPath);
+        System.out.println("Running tests from " + classPath);
         System.out.println("-----------------------------");
         Class classToTest = Class.forName(classPath);
 
@@ -34,11 +34,14 @@ public class TestRunner {
         }
 
         int total = testMethods.size();
-        int failed = 0;
         int success = 0;
 
         for (Method method : beforeAllMethods) {
-            method.invoke(classToTest);
+            try {
+                method.invoke(classToTest);
+            } catch (Exception error) {
+                error.printStackTrace();
+            }
         }
 
         for (Method method : testMethods) {
@@ -47,7 +50,11 @@ public class TestRunner {
             Object instance = classToTest.getDeclaredConstructor().newInstance();
 
             for (Method beforeMethod : beforeMethods) {
-                beforeMethod.invoke(instance);
+                try {
+                    beforeMethod.invoke(instance);
+                } catch (Exception error) {
+                    error.printStackTrace();
+                }
             }
 
             try {
@@ -55,21 +62,28 @@ public class TestRunner {
                 success++;
                 System.out.println("OK");
             } catch (Exception error) {
-                failed++;
                 System.out.println("FAILED");
             }
 
             for (Method afterMethod : afterMethods) {
-                afterMethod.invoke(instance);
+                try {
+                    afterMethod.invoke(instance);
+                } catch (Exception error) {
+                    error.printStackTrace();
+                }
             }
         }
 
         for (Method method : afterAllMethods) {
-            method.invoke(classToTest);
+            try {
+                method.invoke(classToTest);
+            } catch (Exception error) {
+                error.printStackTrace();
+            }
         }
 
         System.out.println("-----------------------------");
-        System.out.println("Summary: total – " + total + ", success – " + success + ", failed – " + failed);
+        System.out.println("Summary: total – " + total + ", success – " + success + ", failed – " + (total - success));
         System.out.println();
     }
 }
