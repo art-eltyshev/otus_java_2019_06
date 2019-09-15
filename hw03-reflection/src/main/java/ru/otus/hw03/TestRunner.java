@@ -4,86 +4,122 @@ import ru.otus.hw03.annotations.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TestRunner {
-    public static void run(String classPath) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
-        System.out.println("Running tests from " + classPath);
-        System.out.println("-----------------------------");
-        Class classToTest = Class.forName(classPath);
+    public static void run(String className) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
+        printTestsRunHeader(className);
 
-        List<Method> testMethods = new ArrayList<>();
-        List<Method> beforeMethods = new ArrayList<>();
-        List<Method> afterMethods = new ArrayList<>();
-        List<Method> beforeAllMethods = new ArrayList<>();
-        List<Method> afterAllMethods = new ArrayList<>();
+        Class classToTest = Class.forName(className);
 
-        for (Method method : classToTest.getDeclaredMethods()) {
-            if (method.getDeclaredAnnotation(Test.class) != null) {
-                testMethods.add(method);
-            } else if (method.getDeclaredAnnotation(Before.class) != null) {
-                beforeMethods.add(method);
-            } else if (method.getDeclaredAnnotation(After.class) != null) {
-                afterMethods.add(method);
-            } else if (method.getDeclaredAnnotation(BeforeAll.class) != null) {
-                beforeAllMethods.add(method);
-            } else if (method.getDeclaredAnnotation(AfterAll.class) != null) {
-                afterAllMethods.add(method);
-            }
-        }
+        boolean successfulPreparation = invokeMethodsSafe(
+                getMethodsWithAnnotation(classToTest, BeforeAll.class),
+                classToTest,
+                true
+        );
 
-        int total = testMethods.size();
-        int success = 0;
+        List<Method> testMethods = getMethodsWithAnnotation(classToTest, Test.class);
+        Map<Method, TestStatus> testsResults = testMethods.stream()
+                .collect(Collectors.toMap(x -> x, x -> TestStatus.SKIPPED));
 
-        for (Method method : beforeAllMethods) {
-            try {
-                method.invoke(classToTest);
-            } catch (Exception error) {
-                error.printStackTrace();
-            }
-        }
+        if (successfulPreparation) {
+            for (Method method : testMethods) {
+                Object instance = classToTest.getDeclaredConstructor().newInstance();
 
-        for (Method method : testMethods) {
-            System.out.print(method.getName() + " – ");
+                successfulPreparation = invokeMethodsSafe(
+                        getMethodsWithAnnotation(classToTest, Before.class),
+                        instance,
+                        true
+                );
 
-            Object instance = classToTest.getDeclaredConstructor().newInstance();
-
-            for (Method beforeMethod : beforeMethods) {
-                try {
-                    beforeMethod.invoke(instance);
-                } catch (Exception error) {
-                    error.printStackTrace();
+                if (successfulPreparation) {
+                    try {
+                        method.invoke(instance);
+                        testsResults.put(method, TestStatus.SUCCESS);
+                    } catch (Exception error) {
+                        testsResults.put(method, TestStatus.FAILED);
+                    }
                 }
-            }
 
-            try {
-                method.invoke(instance);
-                success++;
-                System.out.println("OK");
-            } catch (Exception error) {
-                System.out.println("FAILED");
-            }
+                invokeMethodsSafe(
+                        getMethodsWithAnnotation(classToTest, After.class),
+                        instance,
+                        false
+                );
 
-            for (Method afterMethod : afterMethods) {
-                try {
-                    afterMethod.invoke(instance);
-                } catch (Exception error) {
-                    error.printStackTrace();
+                if (!successfulPreparation) {
+                    break;
                 }
             }
         }
 
-        for (Method method : afterAllMethods) {
-            try {
-                method.invoke(classToTest);
-            } catch (Exception error) {
-                error.printStackTrace();
-            }
-        }
+        invokeMethodsSafe(
+                getMethodsWithAnnotation(classToTest, AfterAll.class),
+                classToTest,
+                false
+        );
 
-        System.out.println("-----------------------------");
-        System.out.println("Summary: total – " + total + ", success – " + success + ", failed – " + (total - success));
-        System.out.println();
+        printTestsRunResults(testsResults);
+        printTestsRunSummary(testsResults);
     }
+
+    private static boolean invokeMethodsSafe(List<Method> methods, Object obj, boolean stopOnError) {
+        boolean isSuccess = true;
+
+        for (Method method : methods) {
+            try {
+                method.invoke(obj);
+            } catch (Exception error) {
+                isSuccess = false;
+                printInvokeMethodError(method, error);
+
+                if (stopOnError) {
+                    break;
+                }
+            }
+        }
+
+        return isSuccess;
+    }
+
+    private static List<Method> getMethodsWithAnnotation(Class clazz, Class annotation) {
+        return Arrays.stream(clazz.getDeclaredMethods())
+                .filter(method -> method.getDeclaredAnnotation(annotation) != null)
+                .collect(Collectors.toList());
+    }
+
+    private static void printTestsRunHeader(String className) {
+        System.out.println("Running tests from " + className + "\n");
+    }
+
+    private static void printInvokeMethodError(Method method, Exception error) {
+        System.err.println("Invoke method \"" + method.getName() + "\" failed:");
+        error.printStackTrace();
+    }
+
+    private static void printTestsRunResults(Map<Method, TestStatus> testsResults) {
+        testsResults.forEach((method, testStatus) -> System.out.println(method.getName() + " – " + testStatus.name()));
+    }
+
+    private static void printTestsRunSummary(Map<Method, TestStatus> testsResults) {
+        int total = testsResults.size();
+        long success = testsResults
+                .entrySet()
+                .stream()
+                .filter(x -> x.getValue() == TestStatus.SUCCESS)
+                .count();
+
+        System.out.println(
+                "\nSummary: total – " + total + ", success – " + success + ", failed – " + (total - success) + "\n"
+        );
+    }
+}
+
+enum TestStatus {
+    SUCCESS,
+    FAILED,
+    SKIPPED
 }
