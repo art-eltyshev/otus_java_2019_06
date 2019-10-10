@@ -18,6 +18,10 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>ru.otus</groupId>
+            <artifactId>hw-common</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
